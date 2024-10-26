@@ -1,18 +1,91 @@
-# nexora
+# Nexora: Lightweight Server Monitoring & Resource Tracker
 
-Nexora transforms the way developers manage and interact with their local development environments. Designed to provide a comprehensive and intuitive overview, Nexora visually maps out your servers, Docker containers, and projects, empowering you to monitor resources, understand dependencies, and streamline workflows with ease.
+![Go](https://img.shields.io/github/go-mod/go-version/rdmnl/nexora) 
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/rdmnl/nexora)
+![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)
+![GitHub last commit](https://img.shields.io/github/last-commit/rdmnl/nexora)
+![GitHub issues](https://img.shields.io/github/issues/rdmnl/nexora)
 
-## Key Features:
+## Overview
 
-- **Interactive Visualization:** See all your servers and containers represented as customizable boxes, complete with real-time CPU, RAM, and port usage indicators.
-- **Dependency Mapping:** Easily understand how your services interact with dynamic arrows that illustrate relationships and data flow between components.
-- **Multi-Project Overview:** Manage and visualize multiple projects simultaneously, giving you a centralized hub to oversee all your development activities.
-- **Resource Monitoring:** Keep track of system performance with live metrics and receive alerts when resource usage exceeds predefined thresholds.
-- **User-Friendly Interface:** Navigate your development environment effortlessly with a clean, modern UI designed for efficiency and clarity.
-- **Seamless Integration:** Compatible with popular tools like Docker and Kubernetes, ensuring smooth integration into your existing workflow.
+**Nexora SM** is a lightweight server monitoring tool designed to dynamically detect and track running services on your system. It provides real-time updates on resource usage (CPU and memory) via a web-based dashboard powered by WebSocket connections. Additionally, Nexora supports seamless merging of detected services with predefined nodes specified in a configuration file (config.yaml), offering flexibility and ease of monitoring.
 
-## Why Choose Nexora?
+## Screenshot
 
-- **Enhance Productivity:** By providing a clear and organized view of your development setup, Nexora helps you identify and resolve issues faster.
-- **Simplify Complexity:** Manage intricate environments with ease, whether you're working on a simple project or a complex microservices architecture.
-- **Stay Informed:** With real-time updates and comprehensive monitoring, you stay informed about the health and performance of your development environment at a glance.
+![Nexora Screenshot](assets/nexora.png)
+
+## Key Features
+
+* **Real-Time Service Monitoring:** Track your running services and see live CPU, memory, and port usage.
+
+* **Configuration-Aware Detection:** Automatically merge detected services with pre-configured nodes from config.yaml.
+
+* **WebSocket-Driven Dashboard:** Receive live updates directly on your browser through WebSocket connections.
+
+* **Lightweight and Simple:** No complex setup—just a straightforward tool to monitor your services efficiently.
+
+## Prerequisites
+
+Ensure lsof command is available on your system (used for detecting running services).
+
+## How to install and use
+
+```bash
+# Download the appropriate release based on your operating system and architecture
+wget https://github.com/rdmnl/nexora/releases/download/v0.1.0/nexora-<os>-<arch>-v0.1.0.tar.gz
+
+# Extract the downloaded tarball
+tar -xzvf nexora-<os>-<arch>-v0.1.0.tar.gz
+
+# Change into the extracted directory
+cd nexora-<os>-<arch>
+
+# Add the current directory to your PATH to run nexora from anywhere
+export PATH=$PATH:$(pwd)
+
+# Run nexora with the desired configuration
+nexora --config-path=config.yaml --port=<available-port>
+```
+
+### Configuration
+
+Customize the config.yaml to define static nodes (services) you want to monitor. Each node should specify the service name and port. Example:
+
+```bash
+nodes:
+  - name: "MyApp"
+    port: 8080
+  - name: "Redis"
+    port: 6379
+```
+
+## Running the Application
+
+Start the Server Monitor:
+
+If the executable is built:
+
+```bash
+./nexora --config-path=config.yaml
+```
+
+Alternatively, run directly with Go:
+
+```bash
+go run ./cmd/main.go --config-path=config.yaml --port=12321
+```
+
+## Access the Dashboard:
+Open your web browser and visit:
+
+```bash
+http://localhost:12321
+```
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](license) file for details.
+
+## Contributing
+
+Feel free to submit issues or pull requests to improve the tool!

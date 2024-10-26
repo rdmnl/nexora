@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexora: Lightweight Server Monitoring & Resource Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen p-6">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Nexora</h1>
+            <p class="text-gray-600">Real-time server metrics dashboard</p>
+        </div>
+
+        <!-- Status Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm font-medium">Active Servers</h3>
+                <p class="text-2xl font-bold text-gray-800 mt-2" id="activeServers">-</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm font-medium">Total CPU Usage</h3>
+                <p class="text-2xl font-bold text-gray-800 mt-2" id="totalCPU">-</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm font-medium">Total Memory Usage</h3>
+                <p class="text-2xl font-bold text-gray-800 mt-2" id="totalMemory">-</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-gray-500 text-sm font-medium">Connection Status</h3>
+                <p class="text-2xl font-bold text-green-500 mt-2" id="connectionStatus">Connected</p>
+            </div>
+        </div>
+
+        <!-- Server List -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-800">Server Details</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Port</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CPU Usage</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Memory Usage</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="serverList">
+                        <!-- Server rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">CPU Usage Trend</h3>
+                <canvas id="cpuChart"></canvas>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Memory Usage Trend</h3>
+                <canvas id="memoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <footer class="bg-gray-800 text-white p-4 mt-8">
+        <div class="container mx-auto text-center">
+          <p>Made with <span class="text-red-500">&hearts;</span> by <a href="https://github.com/rdmnl" class="text-blue-400 hover:underline">rdmnl</a></p>
+        </div>
+      </footer>
+      
+    <script>
+        // Initialize WebSocket connection
+        const ws = new WebSocket('ws://' + window.location.host + '/ws');
+        const serverData = new Map();
+        let cpuChart, memoryChart;
+
+        // Handle WebSocket events
+        ws.onopen = () => {
+            document.getElementById('connectionStatus').textContent = 'Connected';
+            document.getElementById('connectionStatus').classList.replace('text-red-500', 'text-green-500');
+        };
+
+        ws.onclose = () => {
+            document.getElementById('connectionStatus').textContent = 'Disconnected';
+            document.getElementById('connectionStatus').classList.replace('text-green-500', 'text-red-500');
+        };
+
+        // Initialize charts
+        function initializeCharts() {
+            const chartConfig = {
+                type: 'line',
+                options: {
+                    responsive: true,
+                    animation: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            };
+
+            cpuChart = new Chart(
+                document.getElementById('cpuChart'),
+                {
+                    ...chartConfig,
+                    data: {
+                        labels: [],
+                        datasets: []
+                    }
+                }
+            );
+
+            memoryChart = new Chart(
+                document.getElementById('memoryChart'),
+                {
+                    ...chartConfig,
+                    data: {
+                        labels: [],
+                        datasets: []
+                    }
+                }
+            );
+        }
+
+        // Format bytes to human readable format
+        function formatBytes(bytes) {
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            if (bytes === 0) return '0 B';
+            const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
+        }
+
+        // Update server list
+        function updateServerList(servers) {
+            const tableBody = document.getElementById('serverList');
+            tableBody.innerHTML = '';
+
+            servers.forEach(server => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${server.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${server.port}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${server.process_id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${server.cpu_usage.toFixed(1)}%</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatBytes(server.memory_usage)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Active
+                        </span>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Update overview metrics
+        function updateOverview(servers) {
+            document.getElementById('activeServers').textContent = servers.length;
+            const totalCPU = servers.reduce((sum, server) => sum + server.cpu_usage, 0).toFixed(1);
+            document.getElementById('totalCPU').textContent = `${totalCPU}%`;
+            const totalMemory = servers.reduce((sum, server) => sum + server.memory_usage, 0);
+            document.getElementById('totalMemory').textContent = formatBytes(totalMemory);
+        }
+
+        // Update charts
+        function updateCharts(servers) {
+            const timestamp = new Date().toLocaleTimeString();
+
+            // Update CPU chart
+            cpuChart.data.labels.push(timestamp);
+            if (cpuChart.data.labels.length > 10) {
+                cpuChart.data.labels.shift();
+            }
+
+            servers.forEach(server => {
+                let dataset = cpuChart.data.datasets.find(ds => ds.label === server.name);
+                if (!dataset) {
+                    dataset = {
+                        label: server.name,
+                        data: [],
+                        borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                        tension: 0.4
+                    };
+                    cpuChart.data.datasets.push(dataset);
+                }
+                dataset.data.push(server.cpu_usage);
+                if (dataset.data.length > 10) {
+                    dataset.data.shift();
+                }
+            });
+
+            // Update Memory chart
+            memoryChart.data.labels.push(timestamp);
+            if (memoryChart.data.labels.length > 10) {
+                memoryChart.data.labels.shift();
+            }
+
+            servers.forEach(server => {
+                let dataset = memoryChart.data.datasets.find(ds => ds.label === server.name);
+                if (!dataset) {
+                    dataset = {
+                        label: server.name,
+                        data: [],
+                        borderColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                        tension: 0.4
+                    };
+                    memoryChart.data.datasets.push(dataset);
+                }
+                dataset.data.push(server.memory_usage / 1024 / 1024); // Convert to MB
+                if (dataset.data.length > 10) {
+                    dataset.data.shift();
+                }
+            });
+
+            cpuChart.update();
+            memoryChart.update();
+        }
+
+        // Handle incoming WebSocket messages
+        ws.onmessage = (event) => {
+            const servers = JSON.parse(event.data);
+            updateServerList(servers);
+            updateOverview(servers);
+            updateCharts(servers);
+        };
+
+        // Initialize charts when the page loads
+        document.addEventListener('DOMContentLoaded', initializeCharts);
+    </script>
+</body>
+</html>

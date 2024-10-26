@@ -1,0 +1,10 @@
+# Example configuration defining static nodes to monitor.
+# Each node represents a service with a name and port number.
+# These nodes will be merged with dynamically detected services,
+# ensuring both static and real-time tracking.
+
+nodes:
+  - name: "Django"    # Web application running on port 8001
+    port: 8001
+  - name: "Postgres"  # Database service listening on port 5432
+    port: 5432
