@@ -1,10 +1,7 @@
 # Nexora: Lightweight Server Monitoring & Resource Tracker
 
-![Go](https://img.shields.io/github/go-mod/go-version/rdmnl/nexora) 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/rdmnl/nexora)
 ![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)
-![GitHub last commit](https://img.shields.io/github/last-commit/rdmnl/nexora)
-![GitHub issues](https://img.shields.io/github/issues/rdmnl/nexora)
 
 ## Overview
 
